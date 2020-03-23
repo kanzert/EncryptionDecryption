@@ -1,12 +1,36 @@
 package encryptdecrypt;
 
-import com.sun.tools.javac.jvm.Code;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.util.Scanner;
 
 public class Main {
+
+    static class EncoderDecoder {
+
+        Coder method;
+        Algorithm algorithm;
+
+        public String encodeOrDecode(String messageToEncrypt, int key) {
+            EncryptionDecryption encoderDecoder = algorithm == Algorithm.Shift ? new EncryptionDecryptionByShift() : new EncryptionDecryptionByUnicode();
+            String result = "";
+            switch (method) {
+                case Encode:
+                    result = encoderDecoder.encryption(messageToEncrypt, key);
+                    break;
+                case Decode:
+                    result = encoderDecoder.decryption(messageToEncrypt, key);
+                    break;
+            }
+            System.out.println(result);
+            return result;
+        }
+
+        public EncoderDecoder(Coder method, Algorithm algorithm) {
+            this.method = method;
+            this.algorithm = algorithm;
+        }
+    }
 
     interface EncryptionDecryption {
         String encryption(String messageToEncrypt, int key);
@@ -26,7 +50,7 @@ public class Main {
                     positionCurrent = messageToEncrypt.charAt(i) % 97;
                     positionToShift = positionCurrent + key;
                     cipher[i] = (char) (97 + positionToShift);
-                } else if (cipher[i] >= 'A' && cipher[i] <= 'Z'){
+                } else if (cipher[i] >= 'A' && cipher[i] <= 'Z') {
                     positionCurrent = messageToEncrypt.charAt(i) % 65;
                     positionToShift = positionCurrent + key;
                     cipher[i] = (char) (65 + positionToShift);
@@ -50,7 +74,7 @@ public class Main {
                     positionCurrent = messageToDecrypt.charAt(i) % 97;
                     positionToShift = positionCurrent - key;
                     cipher[i] = (char) (97 + positionToShift);
-                } else if (cipher[i] >= 'A' && cipher[i] <= 'Z'){
+                } else if (cipher[i] >= 'A' && cipher[i] <= 'Z') {
                     positionCurrent = messageToDecrypt.charAt(i) % 65;
                     positionToShift = positionCurrent - key;
                     cipher[i] = (char) (65 + positionToShift);
@@ -76,7 +100,7 @@ public class Main {
                     positionCurrent = messageToEncrypt.charAt(i) % 97;
                     positionToShift = (positionCurrent + key) % 26;
                     cipher[i] = (char) (97 + positionToShift);
-                } else if (cipher[i] >= 'A' && cipher[i] <= 'Z'){
+                } else if (cipher[i] >= 'A' && cipher[i] <= 'Z') {
                     positionCurrent = messageToEncrypt.charAt(i) % 65;
                     positionToShift = (positionCurrent + key) % 26;
                     cipher[i] = (char) (65 + positionToShift);
@@ -103,7 +127,7 @@ public class Main {
                         cipher[i] = (char) (123 + positionToShift);
                     }
 
-                } else if (cipher[i] >= 'A' && cipher[i] <= 'Z'){
+                } else if (cipher[i] >= 'A' && cipher[i] <= 'Z') {
                     positionCurrent = messageToDecrypt.charAt(i) % 65;
                     positionToShift = (positionCurrent - key) % 26;
                     if (positionToShift >= 0) {
@@ -121,25 +145,8 @@ public class Main {
     static class EncryptionDecryptionFactory {
         public void setMethod(String[] args) {
             Arguments arguments = Parser.parse(args);
-            EncryptionDecryption encryptionDecryption = null;
-            encryptionDecryption = arguments.algorithm == Algorithm.Shift ? new EncryptionDecryptionByShift() : new EncryptionDecryptionByUnicode();
-            String result = "";
-            switch (arguments.coder) {
-                case Encode:
-                    if (!arguments.isOutEnable) {
-                        System.out.println(encryptionDecryption.encryption(arguments.data, arguments.key));
-                    } else {
-                        result = encryptionDecryption.encryption(arguments.data, arguments.key);
-                    }
-                    break;
-                case Decode:
-                    if (!arguments.isOutEnable) {
-                        System.out.println(encryptionDecryption.decryption(arguments.data, arguments.key));
-                    } else {
-                        result = encryptionDecryption.decryption(arguments.data, arguments.key);
-                    }
-                    break;
-            }
+            EncoderDecoder coder = new EncoderDecoder(arguments.coder, arguments.algorithm);
+            String result = coder.encodeOrDecode(arguments.data, arguments.key);
             if (arguments.isOutEnable) {
                 try {
                     File fileOut = new File(arguments.nameOfFileOut);
