@@ -1,5 +1,7 @@
 package encryptdecrypt;
 
+import com.sun.tools.javac.jvm.Code;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.util.Scanner;
@@ -116,95 +118,39 @@ public class Main {
         }
     }
 
-
     static class EncryptionDecryptionFactory {
-
-        public void setMethod (String[] args) {
-            String actionToDo = "enc";
-            String data = " ";
-            boolean isInEnable = false;
-            boolean isOutEnable = false;
-            String nameOfFileIn = "";
-            String nameOfFileOut = "";
-            int key = 0;
-            String algorithm = "shift";
-
-            try {
-                for (int i = 0; i < args.length; i++) {
-                    if (args[i].equals("-mode")) {
-                        actionToDo = args[i + 1];
+        public void setMethod(String[] args) {
+            Arguments arguments = Parser.parse(args);
+            EncryptionDecryption encryptionDecryption = null;
+            encryptionDecryption = arguments.algorithm == Algorithm.Shift ? new EncryptionDecryptionByShift() : new EncryptionDecryptionByUnicode();
+            String result = "";
+            switch (arguments.coder) {
+                case Encode:
+                    if (!arguments.isOutEnable) {
+                        System.out.println(encryptionDecryption.encryption(arguments.data, arguments.key));
+                    } else {
+                        result = encryptionDecryption.encryption(arguments.data, arguments.key);
                     }
-
-                    if (args[i].equals("-key")) {
-                        key = Integer.parseInt(args[i + 1]);
+                    break;
+                case Decode:
+                    if (!arguments.isOutEnable) {
+                        System.out.println(encryptionDecryption.decryption(arguments.data, arguments.key));
+                    } else {
+                        result = encryptionDecryption.decryption(arguments.data, arguments.key);
                     }
-
-                    if (args[i].equals("-data") && !isInEnable) {
-                        data = args[i + 1];
-                    }
-
-                    if (args[i].equals("-in")) {
-                        isInEnable = true;
-                        nameOfFileIn = args[i + 1];
-                        //nameOfFileIn = "C:\\FromZeroToHero\\JavaProjects\\Encryption-Decryption\\Encryption-Decryption\\task\\src\\encryptdecrypt\\road_to_treasure.txt";
-                    }
-
-                    if (args[i].equals("-out")) {
-                        isOutEnable = true;
-                        nameOfFileOut = args[i + 1];
-                        //nameOfFileOut = "C:\\FromZeroToHero\\JavaProjects\\Encryption-Decryption\\Encryption-Decryption\\task\\src\\encryptdecrypt\\protected.txt";
-                    }
-
-                    if (args[i].equals("-alg")) {
-                        algorithm = args[i + 1];
-                    }
-                }
-
-                if (isInEnable) {
-                    File fileIn = new File(nameOfFileIn);
-
-                    try (Scanner scanner = new Scanner(fileIn)) {
-                        while (scanner.hasNext()) {
-                            data = scanner.nextLine();
-                        }
-                    }
-                }
-                EncryptionDecryption encryptionDecryption = null;
-                if (algorithm.equals("unicode")) {
-                    encryptionDecryption = new EncryptionDecryptionByUnicode();
-
-                } else if (algorithm.equals("shift")) {
-                    encryptionDecryption = new EncryptionDecryptionByShift();
-                }
-
-                if (actionToDo.equals("enc") && !isOutEnable) {
-                    System.out.println(encryptionDecryption.encryption(data, key));
-                } else if (actionToDo.equals("dec") && !isOutEnable){
-                    System.out.println(encryptionDecryption.decryption(data, key));
-                }
-
-                if (isOutEnable) {
-                    String result = "";
-
-                    if (actionToDo.equals("enc")) {
-                        result = encryptionDecryption.encryption(data, key);
-                    } else if (actionToDo.equals("dec")) {
-                        result = encryptionDecryption.decryption(data, key);
-                    }
-
-                    File fileOut = new File(nameOfFileOut);
+                    break;
+            }
+            if (arguments.isOutEnable) {
+                try {
+                    File fileOut = new File(arguments.nameOfFileOut);
                     FileWriter writer = new FileWriter(fileOut, false); // appends text to the file
                     writer.write(result);
                     writer.close();
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                    System.out.println("Error");
                 }
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-                System.out.println("Error");
             }
-        }
-
-        public void getResult(EncryptionDecryption method) {
-
         }
     }
 
@@ -212,5 +158,102 @@ public class Main {
     public static void main(String[] args) {
         EncryptionDecryptionFactory encryptionDecryptionFactory = new EncryptionDecryptionFactory();
         encryptionDecryptionFactory.setMethod(args);
+    }
+
+    enum Coder {
+        Encode("enc"),
+        Decode("dec");
+
+        private String coder;
+
+        Coder(String method) {
+            this.coder = method;
+        }
+
+        public String getCoder() {
+            return coder;
+        }
+    }
+
+    enum Algorithm {
+        Shift("shift"),
+        Unicode("unicode");
+
+        private String algorithm;
+
+        Algorithm(String algorithm) {
+            this.algorithm = algorithm;
+        }
+
+        public String getAlgorithm() {
+            return algorithm;
+        }
+    }
+
+    public static class Arguments {
+        Coder coder = Coder.Encode;
+        String data = " ";
+        boolean isInEnable = false;
+        boolean isOutEnable = false;
+        String nameOfFileIn = "";
+        String nameOfFileOut = "";
+        int key = 0;
+        Algorithm algorithm = Algorithm.Shift;
+    }
+
+    static class Parser {
+        public static Arguments parse(String[] args) {
+            Arguments arguments = new Arguments();
+            try {
+                for (int i = 0; i < args.length; i++) {
+                    if (args[i].equals("-mode")) {
+                        for (Coder coder : Coder.values()) {
+                            if (coder.getCoder().equals(args[i + 1])) {
+                                arguments.coder = coder;
+                            }
+                        }
+                    }
+                    if (args[i].equals("-key")) {
+                        arguments.key = Integer.parseInt(args[i + 1]);
+                    }
+
+                    if (args[i].equals("-data") && !arguments.isInEnable) {
+                        arguments.data = args[i + 1];
+                    }
+
+                    if (args[i].equals("-in")) {
+                        arguments.isInEnable = true;
+                        arguments.nameOfFileIn = args[i + 1];
+                        //nameOfFileIn = "C:\\FromZeroToHero\\JavaProjects\\Encryption-Decryption\\Encryption-Decryption\\task\\src\\encryptdecrypt\\road_to_treasure.txt";
+                    }
+
+                    if (args[i].equals("-out")) {
+                        arguments.isOutEnable = true;
+                        arguments.nameOfFileOut = args[i + 1];
+                        //nameOfFileOut = "C:\\FromZeroToHero\\JavaProjects\\Encryption-Decryption\\Encryption-Decryption\\task\\src\\encryptdecrypt\\protected.txt";
+                    }
+
+                    if (args[i].equals("-alg")) {
+                        for (Algorithm algorithm : Algorithm.values()) {
+                            if (algorithm.getAlgorithm().equals(args[i + 1])) {
+                                arguments.algorithm = algorithm;
+                            }
+                        }
+                    }
+                }
+                if (arguments.isInEnable) {
+                    File fileIn = new File(arguments.nameOfFileIn);
+                    try (Scanner scanner = new Scanner(fileIn)) {
+                        while (scanner.hasNext()) {
+                            arguments.data = scanner.nextLine();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                System.out.println("Error");
+            }
+            return arguments;
+        }
     }
 }
